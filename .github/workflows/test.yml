@@ -21,7 +21,7 @@ jobs:
           cache-dependency-path: enrollment-service/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
         working-directory: enrollment-service
 
       - name: Run unit tests
@@ -48,7 +48,7 @@ jobs:
           cache-dependency-path: enrollment-service/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
         working-directory: enrollment-service
 
       - name: Run component tests
@@ -77,7 +77,7 @@ jobs:
           cache-dependency-path: enrollment-service/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
         working-directory: enrollment-service
 
       - name: Run API tests
