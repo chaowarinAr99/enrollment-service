@@ -37,7 +37,9 @@ cd "$ROOT_DIR"
 stop_port_listener 3000
 stop_port_listener 2525
 
-npm run mongo:start >/dev/null
+if [[ "${SKIP_MONGO_START:-false}" != "true" ]]; then
+  npm run mongo:start >/dev/null
+fi
 
 npm run mb:start > "$ROOT_DIR/mb.log" 2>&1 &
 MB_PID=$!

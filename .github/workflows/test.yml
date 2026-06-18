@@ -83,5 +83,6 @@ jobs:
       - name: Run API tests
         env:
           MONGO_URL: mongodb://127.0.0.1:27017
+          SKIP_MONGO_START: 'true'
         run: npm run test:api
         working-directory: enrollment-service
