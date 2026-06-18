@@ -1,0 +1,33 @@
+meta {
+  name: Create Enrollment - course full
+  type: http
+  seq: 14
+}
+
+post {
+  url: http://localhost:3000/enrollments
+  body: json
+  auth: none
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "employeeId": "EMP008",
+    "courseId": "BIO001"
+  }
+}
+
+tests {
+  test("status code is 409", function() {
+    expect(res.getStatus()).to.equal(409);
+  });
+
+  test("response body is correct", function() {
+    const body = res.getBody();
+    expect(body.message).to.equal("Course is full");
+  });
+}

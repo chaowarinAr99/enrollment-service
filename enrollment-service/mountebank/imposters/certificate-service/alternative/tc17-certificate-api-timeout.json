@@ -1,0 +1,36 @@
+{
+  "port": 4545,
+  "protocol": "http",
+  "name": "certificate-service-timeout-tc17",
+  "stubs": [
+    {
+      "predicates": [
+        {
+          "equals": {
+            "method": "POST",
+            "path": "/certificates"
+          }
+        }
+      ],
+      "responses": [
+        {
+          "_behaviors": {
+            "wait": 1000
+          },
+          "is": {
+            "statusCode": 200,
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "certificate_id": "CERT017",
+              "certificate_url": "https://certificate.example.com/CERT017.pdf",
+              "status": "issued",
+              "issued_at": "2026-05-15T10:00:00Z"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

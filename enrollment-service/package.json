@@ -1,0 +1,34 @@
+{
+  "name": "enrollment-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest --config jest.config.cjs",
+    "test:component": "jest --config jest.component.config.cjs --runInBand",
+    "test:api": "bash ./scripts/test-api.sh",
+    "test:api:success": "bash ./scripts/test-api.sh success",
+    "test:api:alternative": "bash ./scripts/test-api.sh alternative",
+    "test:all": "npm run test:unit && npm run test:component && npm run test:api",
+    "start": "tsx src/main.ts",
+    "start:dev": "tsx watch src/main.ts",
+    "mb:start": "mb --port 2525 --allowInjection",
+    "mongo:start": "docker start enrollment-mongo || docker run --name enrollment-mongo -p 27017:27017 -d mongo:7"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mongodb": "^6.17.0",
+    "mountebank": "^2.9.1",
+    "supertest": "^7.1.4"
+  },
+  "devDependencies": {
+    "@usebruno/cli": "^3.4.2",
+    "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.0.5",
+    "ts-jest": "^29.4.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
+  }
+}

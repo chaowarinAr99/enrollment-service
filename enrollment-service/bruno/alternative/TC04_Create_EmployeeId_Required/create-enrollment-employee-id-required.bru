@@ -1,0 +1,33 @@
+meta {
+  name: Create Enrollment - employeeId required
+  type: http
+  seq: 10
+}
+
+post {
+  url: http://localhost:3000/enrollments
+  body: json
+  auth: none
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "employeeId": null,
+    "courseId": "COM001"
+  }
+}
+
+tests {
+  test("status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("response body is correct", function() {
+    const body = res.getBody();
+    expect(body.message).to.equal("employeeId is required");
+  });
+}

@@ -1,0 +1,12 @@
+export class BadRequestError extends Error {}
+export class CourseNotFoundError extends Error {}
+export class CourseClosedError extends Error {}
+export class CourseFullError extends Error {}
+export class DuplicateEnrollmentError extends Error {}
+export class EnrollmentNotFoundError extends Error {}
+export class InvalidEnrollmentStatusError extends Error {}
+export class EnrollmentCannotBeRejectedError extends Error {}
+export class ProgressNotCompletedError extends Error {}
+export class CertificateApiError extends Error {}
+export class CertificateApiTimeoutError extends Error {}
+export class InvalidCertificateResponseError extends Error {}

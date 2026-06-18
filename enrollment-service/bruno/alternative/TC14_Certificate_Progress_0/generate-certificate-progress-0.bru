@@ -1,0 +1,38 @@
+meta {
+  name: Generate Certificate - progress 0
+  type: http
+  seq: 1103
+}
+
+post {
+  url: http://localhost:3000/enrollments/{{enrollmentId14}}/certificate
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  if (!bru.getVar("enrollmentId14")) {
+    throw new Error("Missing enrollmentId14");
+  }
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "progress": 0
+  }
+}
+
+tests {
+  test("status code is 409", function() {
+    expect(res.getStatus()).to.equal(409);
+  });
+
+  test("response body is correct", function() {
+    const body = res.getBody();
+    expect(body.message).to.equal("Progress must be 100%");
+  });
+}

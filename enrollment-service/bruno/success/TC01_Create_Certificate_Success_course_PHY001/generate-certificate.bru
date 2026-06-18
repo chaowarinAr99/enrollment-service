@@ -1,0 +1,48 @@
+meta {
+  name: Generate Certificate
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:3000/enrollments/{{enrollmentId}}/certificate
+  body: json
+  auth: none
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "progress": 100
+  }
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:3000
+}
+
+script:pre-request {
+  if (!bru.getVar("enrollmentId")) {
+    throw new Error("Missing enrollmentId. Run Create Enrollment first.");
+  }
+}
+
+tests {
+  test("status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("response body is correct", function() {
+    const body = res.getBody();
+    expect(body.enrollmentId).to.be.a("string");
+    expect(body.enrollmentId).to.not.equal("");
+    expect(body.certificateStatus).to.equal("CERTIFICATE_ISSUED");
+    expect(body.certificate.certificateId).to.be.a("string");
+    expect(body.certificate.certificateId).to.not.equal("");
+    expect(body.certificate.certificateUrl).to.match(/^https:\/\/certificate\.example\.com\/.*\.pdf$/);
+    expect(body.certificate.issuedAt).to.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);
+  });
+}

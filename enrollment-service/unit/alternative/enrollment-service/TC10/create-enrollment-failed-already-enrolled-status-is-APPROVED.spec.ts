@@ -1,0 +1,45 @@
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
+import { EnrollmentServiceImpl } from '../../../../src/services/enrollment.service.js';
+
+describe('EnrollmentService.createEnrollment', () => {
+  const courseRepository = { findById: jest.fn() };
+  const enrollmentRepository = {
+    findActiveByEmployeeAndCourse: jest.fn(),
+    create: jest.fn(),
+    findById: jest.fn(),
+    approve: jest.fn(),
+    reject: jest.fn(),
+  };
+  const certificateService = { createCertificate: jest.fn() };
+  let service: EnrollmentServiceImpl;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new EnrollmentServiceImpl(
+      courseRepository as never,
+      enrollmentRepository as never,
+      certificateService as never,
+    );
+  });
+
+  it('TC10 blocks duplicate enrollment when existing status is APPROVED', async () => {
+    courseRepository.findById.mockResolvedValue({
+      id: 'CHE001',
+      title: 'Chemistry with sir title',
+      status: 'OPEN',
+      seatLimit: 98,
+      enrolledCount: 1,
+    });
+    enrollmentRepository.findActiveByEmployeeAndCourse.mockResolvedValue({
+      id: 'ENR010',
+      employeeId: 'EMP010',
+      courseId: 'CHE001',
+      status: 'APPROVED',
+    });
+
+    await expect(
+      service.createEnrollment({ employeeId: 'EMP010', courseId: 'CHE001' }),
+    ).rejects.toThrow('Employee already enrolled');
+  });
+});

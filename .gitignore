@@ -1,0 +1,17 @@
+node_modules/
+
+*.log
+*.pid
+
+.env
+.env.local
+.env.*.local
+
+.DS_Store
+
+coverage/
+dist/
+tmp/
+temp/
+
+.opencode/

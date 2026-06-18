@@ -1,0 +1,45 @@
+meta {
+  name: Approve Enrollment COM001
+  type: http
+  seq: 8
+}
+
+patch {
+  url: http://localhost:3000/enrollments/{{enrollmentId3}}/approve
+  body: json
+  auth: none
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "approvedBy": "HR002"
+  }
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:3000
+}
+
+script:pre-request {
+  if (!bru.getVar("enrollmentId3")) {
+    throw new Error("Missing enrollmentId3. Run Create Enrollment COM001 first.");
+  }
+}
+
+tests {
+  test("status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("response body is correct", function() {
+    const body = res.getBody();
+    expect(body.enrollmentId).to.be.a("string");
+    expect(body.status).to.equal("APPROVED");
+    expect(body.approvedBy).to.equal("HR002");
+    expect(body.approvedAt).to.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);
+  });
+}

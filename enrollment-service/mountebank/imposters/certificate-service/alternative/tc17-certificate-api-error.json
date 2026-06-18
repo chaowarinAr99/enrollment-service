@@ -1,0 +1,36 @@
+{
+  "port": 4545,
+  "protocol": "http",
+  "name": "certificate-service-api-error-tc17",
+  "stubs": [
+    {
+      "predicates": [
+        {
+          "equals": {
+            "method": "POST",
+            "path": "/certificates",
+            "body": {
+              "refId": "ENR017",
+              "learnerId": "EMP017",
+              "courseRef": "COM001"
+            }
+          }
+        }
+      ],
+      "responses": [
+        {
+          "is": {
+            "statusCode": 500,
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "message": "Cannot generate certificate",
+              "code": "CERTIFICATE_API_ERROR"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

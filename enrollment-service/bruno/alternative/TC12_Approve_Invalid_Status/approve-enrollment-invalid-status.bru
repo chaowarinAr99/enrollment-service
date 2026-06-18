@@ -1,0 +1,35 @@
+meta {
+  name: reject
+  type: http
+  seq: 19
+}
+
+patch {
+  url: http://localhost:3000/enrollments/{{enrollmentId}}/reject
+  body: json
+  auth: none
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "rejectedBy": "HR003"
+  }
+}
+
+tests {
+  test("status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("response body is correct", function() {
+    const body = res.getBody();
+    expect(body.enrollmentId).to.be.a("string");
+    expect(body.status).to.equal("REJECTED");
+    expect(body.rejectedBy).to.equal("HR003");
+    expect(body.rejectedAt).to.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);
+  });
+}

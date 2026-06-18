@@ -1,0 +1,40 @@
+meta {
+  name: Generate Certificate - API error
+  type: http
+  seq: 1123
+}
+
+post {
+  url: http://localhost:3000/enrollments/{{enrollmentId17}}/certificate
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  if (!bru.getVar("enrollmentId17")) {
+    throw new Error("Missing enrollmentId17");
+  }
+}
+
+headers {
+  content-type: application/json
+  x-certificate-api-mode: error
+}
+
+body:json {
+  {
+    "progress": 100
+  }
+}
+
+tests {
+  test("status code is 502", function() {
+    expect(res.getStatus()).to.equal(502);
+  });
+
+  test("response body is correct", function() {
+    const body = res.getBody();
+    expect(body.message).to.equal("Cannot generate certificate");
+    expect(body.code).to.equal("CERTIFICATE_API_ERROR");
+  });
+}

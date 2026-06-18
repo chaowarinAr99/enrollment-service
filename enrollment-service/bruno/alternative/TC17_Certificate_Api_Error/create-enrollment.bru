@@ -1,0 +1,33 @@
+meta {
+  name: Create Enrollment TC17
+  type: http
+  seq: 1121
+}
+
+post {
+  url: http://localhost:3000/enrollments
+  body: json
+  auth: none
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "employeeId": "EMP017",
+    "courseId": "COM001"
+  }
+}
+
+script:post-response {
+  const body = res.getBody();
+  bru.setVar("enrollmentId17", body.enrollmentId);
+}
+
+tests {
+  test("status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+}

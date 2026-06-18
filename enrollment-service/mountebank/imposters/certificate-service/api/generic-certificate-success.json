@@ -1,0 +1,33 @@
+{
+  "port": 4545,
+  "protocol": "http",
+  "name": "certificate-service-api-success-generic",
+  "stubs": [
+    {
+      "predicates": [
+        {
+          "equals": {
+            "method": "POST",
+            "path": "/certificates"
+          }
+        }
+      ],
+      "responses": [
+        {
+          "is": {
+            "statusCode": 200,
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "certificate_id": "CERT001",
+              "certificate_url": "https://certificate.example.com/CERT001.pdf",
+              "status": "issued",
+              "issued_at": "2026-05-15T10:00:00Z"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

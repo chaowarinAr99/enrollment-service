@@ -1,0 +1,38 @@
+{
+  "port": 4545,
+  "protocol": "http",
+  "name": "certificate-service-success-tc02",
+  "stubs": [
+    {
+      "predicates": [
+        {
+          "equals": {
+            "method": "POST",
+            "path": "/certificates",
+            "body": {
+              "refId": "ENR002",
+              "learnerId": "EMP002",
+              "courseRef": "CHE001"
+            }
+          }
+        }
+      ],
+      "responses": [
+        {
+          "is": {
+            "statusCode": 200,
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "certificate_id": "CERT002",
+              "certificate_url": "https://certificate.example.com/CERT002.pdf",
+              "status": "issued",
+              "issued_at": "2026-05-15T10:00:00Z"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

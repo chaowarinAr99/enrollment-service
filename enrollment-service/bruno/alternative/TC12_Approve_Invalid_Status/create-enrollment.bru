@@ -1,0 +1,46 @@
+meta {
+  name: Create Enrollment
+  type: http
+  seq: 18
+}
+
+post {
+  url: http://localhost:3000/enrollments
+  body: json
+  auth: none
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "employeeId": "EMP012",
+    "courseId": "PHY001"
+  }
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:3000/
+}
+
+script:post-response {
+  const body = res.getBody();
+  bru.setVar("enrollmentId", body.enrollmentId);
+}
+
+tests {
+  test("status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("response body is correct", function() {
+    const body = res.getBody();
+    expect(body.enrollmentId).to.be.a("string");
+    expect(body.enrollmentId).to.not.equal("");
+    expect(body.employeeId).to.equal("EMP012");
+    expect(body.courseId).to.equal("PHY001");
+    expect(body.status).to.equal("PENDING_APPROVAL");
+  });
+}

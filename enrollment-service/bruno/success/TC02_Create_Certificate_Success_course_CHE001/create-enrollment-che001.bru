@@ -1,0 +1,45 @@
+meta {
+  name: Create Enrollment CHE001
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://localhost:3000/enrollments
+  body: json
+  auth: none
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "employeeId": "EMP002",
+    "courseId": "CHE001"
+  }
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:3000
+}
+
+script:post-response {
+  const body = res.getBody();
+  bru.setVar("enrollmentId2", body.enrollmentId);
+}
+
+tests {
+  test("status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("response body is correct", function() {
+    const body = res.getBody();
+    expect(body.enrollmentId).to.be.a("string");
+    expect(body.employeeId).to.equal("EMP002");
+    expect(body.courseId).to.equal("CHE001");
+    expect(body.status).to.equal("PENDING_APPROVAL");
+  });
+}

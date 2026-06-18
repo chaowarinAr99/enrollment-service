@@ -1,0 +1,31 @@
+{
+  "port": 4545,
+  "protocol": "http",
+  "name": "certificate-service-api-error-generic",
+  "stubs": [
+    {
+      "predicates": [
+        {
+          "equals": {
+            "method": "POST",
+            "path": "/certificates"
+          }
+        }
+      ],
+      "responses": [
+        {
+          "is": {
+            "statusCode": 500,
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "message": "Cannot generate certificate",
+              "code": "CERTIFICATE_API_ERROR"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

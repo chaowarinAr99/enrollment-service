@@ -1,0 +1,33 @@
+meta {
+  name: Approve Enrollment TC13
+  type: http
+  seq: 1092
+}
+
+patch {
+  url: http://localhost:3000/enrollments/{{enrollmentId13}}/approve
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  if (!bru.getVar("enrollmentId13")) {
+    throw new Error("Missing enrollmentId13");
+  }
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "approvedBy": "HR013"
+  }
+}
+
+tests {
+  test("status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

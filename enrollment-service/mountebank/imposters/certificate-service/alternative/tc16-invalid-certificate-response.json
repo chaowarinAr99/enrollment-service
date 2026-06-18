@@ -1,0 +1,35 @@
+{
+  "port": 4545,
+  "protocol": "http",
+  "name": "certificate-service-invalid-response-tc16",
+  "stubs": [
+    {
+      "predicates": [
+        {
+          "equals": {
+            "method": "POST",
+            "path": "/certificates",
+            "body": {
+              "refId": "ENR016",
+              "learnerId": "EMP016",
+              "courseRef": "PHY001"
+            }
+          }
+        }
+      ],
+      "responses": [
+        {
+          "is": {
+            "statusCode": 200,
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "status": "issued"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

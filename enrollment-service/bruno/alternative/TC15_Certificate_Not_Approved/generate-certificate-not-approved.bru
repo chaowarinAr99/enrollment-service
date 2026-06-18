@@ -1,0 +1,38 @@
+meta {
+  name: Generate Certificate - not approved
+  type: http
+  seq: 1112
+}
+
+post {
+  url: http://localhost:3000/enrollments/{{enrollmentId15}}/certificate
+  body: json
+  auth: none
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "progress": 100
+  }
+}
+
+script:pre-request {
+  if (!bru.getVar("enrollmentId15")) {
+    throw new Error("Missing enrollmentId15. Run Create Enrollment TC15 first.");
+  }
+}
+
+tests {
+  test("status code is 409", function() {
+    expect(res.getStatus()).to.equal(409);
+  });
+  
+  test("response body is correct", function() {
+    const body = res.getBody();
+    expect(body.message).to.equal("Enrollment is not approved");
+  });
+}
