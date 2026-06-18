@@ -35,7 +35,7 @@ describe('Approve Enrollment Component', () => {
     await mongoRuntime.close();
   });
 
-  it('approves enrollment and persists approved state in MongoDB', async () => {
+  it('approves enrollment and persists approved state in mongoDB', async () => {
     const courseRepository = createMockCourseRepository({
       id: 'PHY001',
       title: 'Physic with sir title',
