@@ -1,0 +1,68 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: enrollment-api-test-mongo
+    ports:
+      - '27018:27017'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'mongosh --host localhost:27017 --eval "db.adminCommand(\"ping\")"',
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  mountebank:
+    image: bbyars/mountebank:2.9.1
+    container_name: enrollment-api-test-mountebank
+    command: ['--port', '2525', '--allowInjection']
+    ports:
+      - '2525:2525'
+      - '4545:4545'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:2525/imposters').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  enrollment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enrollment-api-test-app
+    environment:
+      PORT: '3000'
+      MONGO_URL: mongodb://mongo:27017
+      MONGO_DB_NAME: enrollment_service
+      MONGO_SEED_ON_START: 'true'
+      CERTIFICATE_API_URL: http://mountebank:4545/certificates
+      CERTIFICATE_API_TIMEOUT_MS: '3000'
+    ports:
+      - '3000:3000'
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mountebank:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s

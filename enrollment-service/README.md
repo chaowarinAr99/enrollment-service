@@ -1,6 +1,6 @@
 # enrollment-service
 
-Local runtime สำหรับฝึก `unit test + Bruno API test + component test + Mountebank` ของ `enrollment-service`
+Local workspace สำหรับฝึก `unit test + component test + Bruno API test` ของ `enrollment-service`
 
 ## What You Can Run
 
@@ -8,14 +8,31 @@ Local runtime สำหรับฝึก `unit test + Bruno API test + componen
 - Mountebank สำหรับ mock certificate API
 - Express app ของ `enrollment-service`
 - Bruno collection สำหรับยิง API flow
-- component test structure สำหรับ Mongo จริง + Mountebank
+- component test structure สำหรับ Mongo จริง + fake `CertificateService`
+
+## Test Taxonomy
+
+- `unit test`
+  - mock dependencies ทั้งหมดของ `EnrollmentServiceImpl`
+- `component test`
+  - ทดสอบ `enrollment-service` ตัวเดียว
+  - ใช้ MongoDB จริงสำหรับ `EnrollmentRepository`
+  - fake `CourseRepository` และ `CertificateService`
+  - ไม่วิ่งไปถึง `certificate-service` หรือ external provider
+- `Bruno API test`
+  - ยิง API ของ `enrollment-service` ผ่าน HTTP จริง
+  - แนะนำให้ใช้ Dockerized runtime เป็น default path
+  - ใช้ Mountebank จำลอง certificate API
+- `cross-repo integration`
+  - ใช้ `enrollment-service` คุยกับ `certificate-service` จริง
+  - ชั้นนี้ควรอยู่ฝั่ง integration harness ของ `certificate-service` ไม่ใช่ใน `component/`
 
 ## Current Progress
 
 - Unit tests: `38 passed`
 - Component tests: `37 passed`
 - API test assets (Bruno): ready and organized by `TC01-TC17`
-- API CLI runner: ready (`npm run test:api`)
+- Dockerized Bruno runner: ready (`npm run test:bruno`)
 - Full local regression: ready (`npm run test:all`)
 
 ## Prerequisites
@@ -51,14 +68,33 @@ CERTIFICATE_API_TIMEOUT_MS=3000
 npm test
 npm run test:unit
 npm run test:component
+npm run test:bruno
+npm run test:bruno:success
+npm run test:bruno:alternative
 npm run test:api
+npm run test:api:local
 npm run test:api:success
+npm run test:api:success:local
 npm run test:api:alternative
+npm run test:api:alternative:local
+npm run test:api:docker
+npm run test:api:success:docker
+npm run test:api:alternative:docker
 npm run test:all
 npm run start
 npm run start:dev
 npm run mongo:start
 npm run mb:start
+```
+
+## Local Runtime Fallback
+
+หัวข้อนี้อธิบาย local-process runtime แบบเดิมสำหรับใช้ debug หรือทดลอง flow เองทีละ step
+
+เส้นทางแนะนำหลักของ API layer ยังเป็น:
+
+```bash
+npm run test:bruno
 ```
 
 ## Step by Step
@@ -237,7 +273,37 @@ npm run test:component
 รัน API tests ผ่าน Bruno CLI:
 
 ```bash
-npm run test:api
+npm run test:bruno
+```
+
+หมายเหตุ:
+- `npm run test:bruno` ตอนนี้ชี้ไป Dockerized runtime โดยตรง
+- `npm run test:api:local` คือชื่อที่ชัดที่สุดสำหรับ local-process runtime แบบเดิม
+- `npm run test:api` ยังเก็บไว้เป็น alias fallback ไปที่ `test:api:local`
+
+รัน API tests ผ่าน Dockerized runtime:
+
+```bash
+npm run test:bruno
+```
+
+Dockerized runtime นี้ใช้ host ports ดังนี้:
+
+- `3000` = `enrollment-service`
+- `2525` = Mountebank admin API
+- `4545` = Mountebank imposter port สำหรับ certificate API
+- `27018` = MongoDB สำหรับ API test runtime
+
+รันเฉพาะ success ผ่าน Dockerized runtime:
+
+```bash
+npm run test:bruno:success
+```
+
+รันเฉพาะ alternative ผ่าน Dockerized runtime:
+
+```bash
+npm run test:bruno:alternative
 ```
 
 รันทุกอย่างรวมกัน:
@@ -258,6 +324,7 @@ component/README.md
 
 - ถ้าพอร์ต `3000` ถูกใช้อยู่ จะ start server ไม่ได้
 - ถ้าพอร์ต `2525` ถูกใช้อยู่ จะ start Mountebank ไม่ได้
+- Dockerized Bruno runtime จะใช้ `3000`, `2525`, `4545`, `27018` จาก host
 - ถ้า `generate-certificate.bru` fail ให้เช็ก 3 จุดก่อน:
   - `curl http://localhost:3000/health`
   - `curl http://localhost:2525/imposters`

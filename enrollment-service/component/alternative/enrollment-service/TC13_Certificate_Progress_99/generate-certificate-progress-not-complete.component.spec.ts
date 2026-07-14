@@ -2,9 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/glo
 import request from 'supertest';
 
 import { createComponentApp, createMockCourseRepository } from '../../../setup/app-factory.js';
+import { createFakeCertificateService } from '../../../setup/fake-certificate-service.js';
 import { createMongoTestRuntime, type MongoTestRuntime } from '../../../setup/mongo-test-runtime.js';
 import { MongoEnrollmentRepository } from '../../../../src/repositories/mongo-repositories.js';
-import { HttpCertificateService } from '../../../../src/services/certificate.service.js';
 
 describe('Generate Certificate Progress Not Complete Component', () => {
   let mongoRuntime: MongoTestRuntime;
@@ -16,11 +16,11 @@ describe('Generate Certificate Progress Not Complete Component', () => {
   beforeEach(async () => {
     await mongoRuntime.reset();
     await mongoRuntime.enrollmentsCollection.insertOne({
-      id: 'ENR001',
-      employeeId: 'EMP001',
-      courseId: 'PHY001',
+      id: 'ENR013',
+      employeeId: 'EMP013',
+      courseId: 'CHE001',
       status: 'APPROVED',
-      approvedBy: 'HR001',
+      approvedBy: 'HR013',
       approvedAt: '2026-05-15T10:00:00Z',
       rejectedBy: null,
       rejectedAt: null,
@@ -37,19 +37,16 @@ describe('Generate Certificate Progress Not Complete Component', () => {
 
   it('returns 409 without changing certificate fields when progress is below 100', async () => {
     const courseRepository = createMockCourseRepository({
-      id: 'PHY001',
-      title: 'Physic with sir title',
+      id: 'CHE001',
+      title: 'Chemistry with sir title',
       status: 'OPEN',
       seatLimit: 99,
-      enrolledCount: 0,
+      enrolledCount: 1,
     });
     const enrollmentRepository = new MongoEnrollmentRepository(
       mongoRuntime.enrollmentsCollection,
     );
-    const certificateService = new HttpCertificateService({
-      apiUrl: 'http://127.0.0.1:4545/certificates',
-      timeoutMs: 300,
-    });
+    const certificateService = createFakeCertificateService();
 
     const app = createComponentApp({
       courseRepository,
@@ -58,16 +55,20 @@ describe('Generate Certificate Progress Not Complete Component', () => {
     });
 
     const response = await request(app)
-      .post('/enrollments/ENR001/certificate')
+      .post('/enrollments/ENR013/certificate')
       .send({ progress: 99 });
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({ message: 'Progress must be 100%' });
+    expect(certificateService.createCertificate).not.toHaveBeenCalled();
 
-    const persistedEnrollment = await mongoRuntime.enrollmentsCollection.findOne({ id: 'ENR001' });
+    const persistedEnrollment = await mongoRuntime.enrollmentsCollection.findOne({ id: 'ENR013' });
 
     expect(persistedEnrollment).toMatchObject({
-      id: 'ENR001',
+      id: 'ENR013',
+      employeeId: 'EMP013',
+      courseId: 'CHE001',
+      approvedBy: 'HR013',
       certificateStatus: null,
       certificateUrl: null,
     });

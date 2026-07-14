@@ -27,7 +27,7 @@ describe('EnrollmentService.rejectEnrollment', () => {
     enrollmentRepository.findById.mockResolvedValue({
       id: 'ENR012',
       employeeId: 'EMP012',
-      courseId: 'CHE001',
+      courseId: 'PHY001',
       status: 'PENDING_APPROVAL',
     });
     enrollmentRepository.reject.mockResolvedValue({

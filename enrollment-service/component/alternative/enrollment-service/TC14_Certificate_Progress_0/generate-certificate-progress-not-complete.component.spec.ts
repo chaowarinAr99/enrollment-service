@@ -2,9 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/glo
 import request from 'supertest';
 
 import { createComponentApp, createMockCourseRepository } from '../../../setup/app-factory.js';
+import { createFakeCertificateService } from '../../../setup/fake-certificate-service.js';
 import { createMongoTestRuntime, type MongoTestRuntime } from '../../../setup/mongo-test-runtime.js';
 import { MongoEnrollmentRepository } from '../../../../src/repositories/mongo-repositories.js';
-import { HttpCertificateService } from '../../../../src/services/certificate.service.js';
 
 describe('TC14 Generate Certificate Progress 0 Component', () => {
   let mongoRuntime: MongoTestRuntime;
@@ -20,12 +20,13 @@ describe('TC14 Generate Certificate Progress 0 Component', () => {
   it('returns 409 when progress is 0 and keeps certificate fields null', async () => {
     const courseRepository = createMockCourseRepository({ id: 'COM001', title: 'Computer with sir title', status: 'OPEN', seatLimit: 99, enrolledCount: 98 });
     const enrollmentRepository = new MongoEnrollmentRepository(mongoRuntime.enrollmentsCollection);
-    const certificateService = new HttpCertificateService({ apiUrl: 'http://127.0.0.1:4545/certificates', timeoutMs: 300 });
+    const certificateService = createFakeCertificateService();
     const app = createComponentApp({ courseRepository, enrollmentRepository, certificateService });
     const response = await request(app).post('/enrollments/ENR014/certificate').send({ progress: 0 });
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({ message: 'Progress must be 100%' });
+    expect(certificateService.createCertificate).not.toHaveBeenCalled();
     const persisted = await mongoRuntime.enrollmentsCollection.findOne({ id: 'ENR014' });
     expect(persisted).toMatchObject({ id: 'ENR014', certificateStatus: null, certificateUrl: null });
   });

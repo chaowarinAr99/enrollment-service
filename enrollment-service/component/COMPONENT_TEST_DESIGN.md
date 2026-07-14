@@ -1,86 +1,137 @@
-# Component Test Design
+## Component Test Design
 
-เอกสารนี้เป็น version ที่แก้ไขแล้วของ design สำหรับ component test ของ `enrollment-service`
+เอกสารนี้อธิบายขอบเขตของ `component test` สำหรับ `enrollment-service` หลังจากแยก responsibility ออกจาก `cross-repo integration` ชัดเจนแล้ว
 
-เป้าหมายของ component test ในโปรเจกต์นี้:
+## Goal
 
-- ยิง API จริงเข้า app
-- ใช้ MongoDB จริงเฉพาะ `EnrollmentRepository`
-- mock `CourseRepository`
-- mock external certificate API ด้วย Mountebank imposter
-- ตรวจทั้ง HTTP response และ state ใน database
+component test ของโปรเจกต์นี้มีเป้าหมายเพื่อพิสูจน์ว่า `enrollment-service` ทำงานถูกต้องภายใน service ของตัวเอง โดยครอบคลุม:
 
-## Scope
+- HTTP route และ controller wiring
+- business logic ใน `EnrollmentServiceImpl`
+- error mapping
+- persistence ผ่าน `EnrollmentRepository` + MongoDB จริง
+- การเรียก certificate boundary ด้วย request mapping ที่ถูกต้อง
 
-flow ตัวอย่างนี้ครอบคลุม:
+สิ่งที่ component test ไม่ได้พยายามพิสูจน์:
 
-1. create enrollment
-2. get enrollment by id
-3. approve enrollment
-4. get enrollment by id หลัง approve
-5. generate certificate
-6. get enrollment by id หลัง generate certificate
+- การทำงานจริงของ `certificate-service`
+- การทำงานของ external certificate provider
+- การสื่อสารข้าม repo แบบ end-to-end
+
+## Taxonomy
+
+### Unit Test
+
+- SUT: `EnrollmentServiceImpl`
+- mock ทั้ง `CourseRepository`, `EnrollmentRepository`, `CertificateService`
+- ไม่แตะ HTTP, MongoDB, network
+
+### Component Test
+
+- SUT: `enrollment-service` หนึ่ง service
+- real: app, routes, controller, service, `EnrollmentRepository`, MongoDB
+- fake/mock: `CourseRepository`, `CertificateService`
+- ไม่เรียก `certificate-service` จริง และไม่เรียก external provider
+
+### Cross-repo Integration
+
+- real: `enrollment-service` + `certificate-service`
+- real: MongoDB, HTTP ระหว่าง services
+- fake: upstream external provider ผ่าน Mountebank
+
+สรุปสั้น:
+
+- component test = ทดสอบ `enrollment-service` อย่างเดียว
+- cross-repo integration = ทดสอบ `enrollment-service` คุยกับ `certificate-service` จริง
+
+## SUT Boundary
+
+```text
+Component Test: enrollment-service
+
+          fake/mock                    fake/mock
+       CourseRepository             CertificateService
+               \                          /
+                \                        /
+                 v                      v
+
+  +--------------------------------------------------+
+  |                 SUT: enrollment-service          |
+  |                                                  |
+  |  HTTP route -> controller -> service -> repo     |
+  |                                      |           |
+  |                                      v           |
+  |                                   MongoDB        |
+  +--------------------------------------------------+
+```
 
 ## Folder Strategy
 
-component test ของ repo นี้ตั้งใจให้ mirror โครงของ Bruno แบบ `TC01-TC17` ในระดับโฟลเดอร์ เช่น:
+component test ของ repo นี้ยัง mirror โครงของ Bruno แบบ `TC01-TC17` ในระดับโฟลเดอร์ เพื่อให้ง่ายต่อการ trace business scenario:
 
 ```text
 component/
   success/
     enrollment-service/
       TC01_Create_Certificate_Success_course_PHY001/
+      TC02_Create_Certificate_Success_course_CHE001/
+      TC03_Create_Certificate_Success_course_COM001/
   alternative/
     enrollment-service/
-      TC09_Create_Duplicate_PHY001/
-      TC12_Approve_Invalid_Status/
-      TC13_Certificate_Progress_99/
+      TC04_Create_EmployeeId_Required/
+      ...
       TC17_Certificate_Api_Error/
 ```
 
 ข้อดีของโครงนี้:
 
-- trace กับ Bruno ได้ง่าย
-- เห็น progress เป็นราย TC ชัด
-- เปิดทางให้เติมเคสที่ยังไม่ implement เป็น placeholder folder ได้
+- trace กับ Bruno scenarios ได้ง่าย
+- เห็น progress เป็นราย TC ชัดเจน
+- แยก success / alternative ได้ตรงกับ business intent
 
-## Pre-conditions
+## Setup Strategy
 
-- Mongo test database ต้องถูก reset ก่อนเริ่ม test
-- `enrollments` test data ที่จำเป็นต้องถูก insert จากใน test suite เอง
-- `CourseRepository` ถูก mock ตาม scenario ที่ต้องการทดสอบ
-- Mountebank ต้องโหลด imposter success สำหรับ certificate API
-- app ต้องถูกสร้างจาก test app factory ไม่ใช้ process ที่รันแยกจากภายนอก
+### Real Dependencies
 
-## External Certificate API Contract
+- `Express` app จริงจาก `createComponentApp()`
+- routes / controller / service จริง
+- `MongoEnrollmentRepository`
+- MongoDB test database จริง
 
-component test ของ certificate flow ต้องใช้ imposter ที่ตรงกับ implementation ปัจจุบันของ service
+### Fake / Mock Dependencies
 
-### Expected request from enrollment-service
+- `CourseRepository`
+  - mock ตาม scenario เช่น course เปิด/ปิด/เต็ม/หาไม่เจอ
+- `CertificateService`
+  - fake boundary object ที่ inject เข้า app factory
+  - ใช้ `jest.fn()` เพื่อทั้ง stub response และ assert interaction
 
-Method:
+### Test Helpers
 
-```text
-POST
-```
+- `component/setup/app-factory.ts`
+  - ประกอบ app พร้อม inject dependencies
+- `component/setup/mongo-test-runtime.ts`
+  - connect / reset / close Mongo test DB
+- `component/setup/fake-certificate-service.ts`
+  - helper สำหรับ success / api error / timeout และ request assertion
 
-Path:
+## Certificate Boundary Policy
 
-```text
-/certificates
-```
+ใน component test ของ `enrollment-service`:
 
-Body:
+- ไม่ใช้ `HttpCertificateService`
+- ไม่ใช้ Mountebank
+- ไม่จำลอง external provider raw contract โดยตรง
 
-```json
-{
-  "refId": "ENR001",
-  "learnerId": "EMP001",
-  "courseRef": "PHY001"
-}
-```
+เหตุผล:
 
-### Expected success response from imposter
+- `enrollment-service` ควรรู้แค่ certificate boundary ของตัวเอง
+- responsibility เรื่อง HTTP client และ upstream response validation ควรอยู่ใน `certificate-service`
+- component test ต้อง isolate ให้อยู่ใน service เดียว
+
+### Success Behavior
+
+`CertificateService.createCertificate(...)` ควรคืนค่า success payload เช่น:
 
 ```json
 {
@@ -91,475 +142,74 @@ Body:
 }
 ```
 
-## Flow A: Create Enrollment Success
-
-### Step A1
+### Failure Behavior
 
-Endpoint:
+fake certificate boundary ควรใช้ domain-level errors เช่น:
 
-```text
-POST /enrollments
-```
-
-Header:
-
-```text
-Content-Type: application/json
-```
-
-Request Body:
-
-```json
-{
-  "employeeId": "EMP001",
-  "courseId": "PHY001"
-}
-```
+- `CertificateApiError`
+- `CertificateApiTimeoutError`
+- `InvalidCertificateResponseError`
 
-Expected HTTP Response:
-
-Status:
+### Pre-boundary Failure
 
-```text
-201
-```
+ถ้า business rule fail ก่อน เช่น:
 
-Body:
-
-```json
-{
-  "enrollmentId": "ENR001",
-  "employeeId": "EMP001",
-  "courseId": "PHY001",
-  "status": "PENDING_APPROVAL"
-}
-```
+- progress ไม่เท่ากับ `100`
+- enrollment ยังไม่ `APPROVED`
+- enrollment เป็น `REJECTED`
 
-HTTP Assertions:
+component test ควร assert ว่า `CertificateService.createCertificate()` ไม่ถูกเรียก
 
-- `res.status` = `201`
-- `res.body.enrollmentId` is string
-- `res.body.employeeId` = `EMP001`
-- `res.body.courseId` = `PHY001`
-- `res.body.status` = `PENDING_APPROVAL`
+## Scenario Matrix
 
-DB Assertions:
-
-- document exists in `enrollments`
-- `employeeId` = `EMP001`
-- `courseId` = `PHY001`
-- `status` = `PENDING_APPROVAL`
-- `approvedBy` = `null`
-- `approvedAt` = `null`
-- `rejectedBy` = `null`
-- `rejectedAt` = `null`
-- `certificateStatus` = `null`
-- `certificateUrl` = `null`
+### Success Cases
 
-## Flow B: Get Enrollment By Id After Create
+- `TC01` `PHY001`
+  - fake certificate boundary คืน success payload `CERT001`
+- `TC02` `CHE001`
+  - fake certificate boundary คืน success payload `CERT002`
+- `TC03` `COM001`
+  - fake certificate boundary คืน success payload `CERT003`
 
-### Step B1
+### Fail Before Certificate Boundary
 
-Endpoint:
+- `TC13` progress `99`
+- `TC14` progress `0`
+- `TC15` enrollment not approved
+- `TC16` enrollment rejected
 
-```text
-GET /enrollments/ENR001
-```
+ทุกเคสนี้ต้อง assert ว่า certificate boundary ไม่ถูกเรียก
 
-Expected HTTP Response:
+### Downstream Failure Cases
 
-Status:
+- `TC17` API error
+  - fake certificate boundary throw `CertificateApiError`
+- `TC17` timeout
+  - fake certificate boundary throw `CertificateApiTimeoutError`
 
-```text
-200
-```
+## Assertions
 
-Body:
+component test ทุกเคสควรมีอย่างน้อย 2 ชั้น:
 
-```json
-{
-  "id": "ENR001",
-  "employeeId": "EMP001",
-  "courseId": "PHY001",
-  "status": "PENDING_APPROVAL",
-  "approvedBy": null,
-  "approvedAt": null,
-  "rejectedBy": null,
-  "rejectedAt": null,
-  "certificateStatus": null,
-  "certificateUrl": null,
-  "createdAt": "2026-05-15T10:00:00Z",
-  "updatedAt": "2026-05-15T10:00:00Z"
-}
-```
-
-HTTP Assertions:
-
-- `res.status` = `200`
-- `res.body.id` = `ENR001`
-- `res.body.employeeId` = `EMP001`
-- `res.body.courseId` = `PHY001`
-- `res.body.status` = `PENDING_APPROVAL`
-- `res.body.approvedBy` = `null`
-- `res.body.approvedAt` = `null`
-- `res.body.rejectedBy` = `null`
-- `res.body.rejectedAt` = `null`
-- `res.body.certificateStatus` = `null`
-- `res.body.certificateUrl` = `null`
-- `res.body.createdAt` matches ISO date
-- `res.body.updatedAt` matches ISO date
-
-## Flow C: Approve Enrollment Success
-
-### Step C1
-
-Endpoint:
-
-```text
-PATCH /enrollments/ENR001/approve
-```
-
-Request Body:
-
-```json
-{
-  "approvedBy": "HR001"
-}
-```
-
-Expected HTTP Response:
-
-Status:
-
-```text
-200
-```
-
-Body:
-
-```json
-{
-  "enrollmentId": "ENR001",
-  "status": "APPROVED",
-  "approvedBy": "HR001",
-  "approvedAt": "2026-05-15T10:00:00Z"
-}
-```
-
-HTTP Assertions:
-
-- `res.status` = `200`
-- `res.body.enrollmentId` = `ENR001`
-- `res.body.status` = `APPROVED`
-- `res.body.approvedBy` = `HR001`
-- `res.body.approvedAt` matches ISO date
-
-DB Assertions:
-
-- document exists in `enrollments`
-- `status` = `APPROVED`
-- `approvedBy` = `HR001`
-- `approvedAt` matches ISO date
-
-## Flow D: Get Enrollment By Id After Approve
-
-### Step D1
-
-Endpoint:
-
-```text
-GET /enrollments/ENR001
-```
-
-Expected HTTP Response:
-
-```json
-{
-  "id": "ENR001",
-  "employeeId": "EMP001",
-  "courseId": "PHY001",
-  "status": "APPROVED",
-  "approvedBy": "HR001",
-  "approvedAt": "2026-05-15T10:00:00Z",
-  "rejectedBy": null,
-  "rejectedAt": null,
-  "certificateStatus": null,
-  "certificateUrl": null,
-  "createdAt": "2026-05-15T10:00:00Z",
-  "updatedAt": "2026-05-15T10:00:00Z"
-}
-```
-
-Important correction:
-
-- หลัง approve แล้ว `status` ต้องเป็น `APPROVED`
-- ไม่ใช่ `PENDING_APPROVAL`
-
-HTTP Assertions:
-
-- `res.body.id` = `ENR001`
-- `res.body.status` = `APPROVED`
-- `res.body.approvedBy` = `HR001`
-- `res.body.approvedAt` matches ISO date
-- `res.body.certificateStatus` = `null`
-- `res.body.certificateUrl` = `null`
-
-## Flow E: Generate Certificate Success
-
-### Step E1
-
-Endpoint:
-
-```text
-POST /enrollments/ENR001/certificate
-```
-
-Request Body:
-
-```json
-{
-  "progress": 100
-}
-```
-
-Expected HTTP Response:
-
-Status:
-
-```text
-200
-```
-
-Body:
-
-```json
-{
-  "enrollmentId": "ENR001",
-  "certificateStatus": "CERTIFICATE_ISSUED",
-  "certificate": {
-    "certificateId": "CERT001",
-    "certificateUrl": "https://certificate.example.com/CERT001.pdf",
-    "issuedAt": "2026-05-15T10:00:00Z"
-  }
-}
-```
-
-HTTP Assertions:
-
-- `res.status` = `200`
-- `res.body.enrollmentId` = `ENR001`
-- `res.body.certificateStatus` = `CERTIFICATE_ISSUED`
-- `res.body.certificate.certificateId` = `CERT001`
-- `res.body.certificate.certificateUrl` matches `^https://certificate.example.com/.*\.pdf$`
-- `res.body.certificate.issuedAt` matches ISO date
-
-DB Assertions:
-
-- document exists in `enrollments`
-- `certificateStatus` = `CERTIFICATE_ISSUED`
-- `certificateUrl` = `https://certificate.example.com/CERT001.pdf`
-
-## Flow F: Get Enrollment By Id After Generate Certificate
-
-### Step F1
-
-Endpoint:
-
-```text
-GET /enrollments/ENR001
-```
-
-Expected HTTP Response:
-
-```json
-{
-  "id": "ENR001",
-  "employeeId": "EMP001",
-  "courseId": "PHY001",
-  "status": "APPROVED",
-  "approvedBy": "HR001",
-  "approvedAt": "2026-05-15T10:00:00Z",
-  "rejectedBy": null,
-  "rejectedAt": null,
-  "certificateStatus": "CERTIFICATE_ISSUED",
-  "certificateUrl": "https://certificate.example.com/CERT001.pdf",
-  "createdAt": "2026-05-15T10:00:00Z",
-  "updatedAt": "2026-05-15T10:00:00Z"
-}
-```
-
-Important correction:
-
-- หลัง generate certificate แล้ว
-  - `certificateStatus` ต้องเป็น `CERTIFICATE_ISSUED`
-  - `certificateUrl` ต้องไม่ใช่ `null`
-- `status` ของ enrollment ยังคงเป็น `APPROVED`
-
-HTTP Assertions:
-
-- `res.body.id` = `ENR001`
-- `res.body.employeeId` = `EMP001`
-- `res.body.courseId` = `PHY001`
-- `res.body.status` = `APPROVED`
-- `res.body.approvedBy` = `HR001`
-- `res.body.approvedAt` matches ISO date
-- `res.body.certificateStatus` = `CERTIFICATE_ISSUED`
-- `res.body.certificateUrl` = `https://certificate.example.com/CERT001.pdf`
-
-DB Assertions:
-
-- persisted document has `status = APPROVED`
-- persisted document has `certificateStatus = CERTIFICATE_ISSUED`
-- persisted document has `certificateUrl = https://certificate.example.com/CERT001.pdf`
-
-## Corrected Mountebank Imposter Example
-
-```json
-{
-  "predicates": [
-    {
-      "equals": {
-        "method": "POST",
-        "path": "/certificates",
-        "body": {
-          "refId": "ENR001",
-          "learnerId": "EMP001",
-          "courseRef": "PHY001"
-        }
-      }
-    }
-  ],
-  "responses": [
-    {
-      "is": {
-        "statusCode": 200,
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "certificate_id": "CERT001",
-          "certificate_url": "https://certificate.example.com/CERT001.pdf",
-          "status": "issued",
-          "issued_at": "2026-05-15T10:00:00Z"
-        }
-      }
-    }
-  ]
-}
-```
-
-## What Should Be Checked In Component Tests
-
-component test ทุกเคสควรมี 2 ชั้น:
-
-1. HTTP Assertions
+1. HTTP assertions
 - status code
 - response body
 
-2. DB Assertions
-- document ถูกสร้าง/อัปเดตจริงใน Mongo
-- state transition ถูกต้อง
-- field สำคัญ persist ถูกต้อง
+2. DB assertions
+- enrollment document state หลัง action
 
-## Current Definition In This Repo
+สำหรับ certificate-related scenarios ให้เพิ่ม 1 ชั้น:
 
-component test ของ repo นี้ตอนนี้ใช้ขอบเขตแบบ hybrid:
+3. Boundary assertions
+- request mapping ไป `CertificateService.createCertificate()` ถูกต้อง
+- หรือ assert ว่าไม่ถูกเรียกใน pre-boundary failures
 
-- `CourseRepository` = mock
-- `EnrollmentRepository` = real Mongo
-- `Certificate API` = real Mountebank imposter หรือ real HTTP client ที่ชี้ไป imposter
+## Definition of Done
 
-เหตุผล:
-
-- `CourseRepository` ทำหน้าที่ read-only ใน flow ปัจจุบัน
-- สิ่งที่ต้องพิสูจน์ persistence จริงคือ `EnrollmentRepository`
-- certificate flow ต้องพิสูจน์การคุยกับ external dependency ผ่าน contract จริง
-
-## Current Implemented TCs
-
-- `TC01_Create_Certificate_Success_course_PHY001`
-  - create enrollment
-  - approve enrollment
-  - get enrollment after create
-  - get enrollment after approve
-  - get enrollment after certificate
-  - generate certificate success via Mountebank
-- `TC02_Create_Certificate_Success_course_CHE001`
-  - create enrollment
-  - approve enrollment
-  - get enrollment after create
-  - get enrollment after approve
-  - get enrollment after certificate
-  - generate certificate success via Mountebank
-- `TC03_Create_Certificate_Success_course_COM001`
-  - create enrollment
-  - approve enrollment
-  - get enrollment after create
-  - get enrollment after approve
-  - get enrollment after certificate
-  - generate certificate success via Mountebank
-- `TC04_Create_EmployeeId_Required`
-  - create enrollment validation
-- `TC05_Create_CourseId_Required`
-  - create enrollment validation
-- `TC06_Create_Course_Not_Found`
-  - create enrollment course not found
-- `TC07_Create_Course_Closed`
-  - create enrollment course closed
-- `TC08_Create_Course_Full`
-  - create enrollment course full
-- `TC09_Create_Duplicate_PHY001`
-  - create enrollment duplicate
-- `TC10_Create_Duplicate_CHE001`
-  - create enrollment duplicate
-- `TC11_Create_Internal_Server_Error`
-  - create enrollment internal error simulation
-- `TC12_Approve_Invalid_Status`
-  - create enrollment setup flow
-  - approve invalid status
-  - reject enrollment setup flow
-- `TC13_Certificate_Progress_99`
-  - generate certificate progress not complete
-- `TC14_Certificate_Progress_0`
-  - generate certificate progress not complete
-- `TC15_Certificate_Not_Approved`
-  - generate certificate not approved
-- `TC16_Certificate_Course_Reject`
-  - generate certificate rejected enrollment
-- `TC17_Certificate_Api_Error`
-  - create enrollment setup flow
-  - approve enrollment setup flow
-  - certificate API error
-  - certificate API timeout
-
-รวม test files ที่รันผ่านตอนนี้: `37`
-
-## Checklist For First Component Test
-
-เป้าหมาย: `create-enrollment.component.spec.ts`
-
-### Setup
-
-- [ ] มี Mongo test runtime แยก database สำหรับ component tests
-- [ ] reset database ก่อน test
-- [ ] ใช้ mock `CourseRepository` สำหรับ course data
-- [ ] build app จาก `app-factory.ts`
-- [ ] ยังไม่ต้องใช้ Mountebank สำหรับ create success case
-
-### Test Steps
-
-- [ ] ยิง `POST /enrollments`
-- [ ] assert `201`
-- [ ] assert `employeeId`, `courseId`, `status`
-- [ ] assert `enrollmentId` เป็น string
-- [ ] query Mongo collection `enrollments`
-- [ ] assert document ถูกสร้างจริง
-- [ ] assert persisted `status = PENDING_APPROVAL`
-- [ ] assert certificate fields ยังเป็น `null`
-
-### Definition of Done
-
-- [ ] component test file รันผ่านด้วย `npm run test:component`
-- [ ] mock `CourseRepository`
-- [ ] ใช้ Mongo จริงสำหรับ `EnrollmentRepository`
-- [ ] assert ทั้ง HTTP และ DB state
+- ใช้ MongoDB จริงสำหรับ `EnrollmentRepository`
+- mock `CourseRepository` ตาม scenario
+- fake `CertificateService` ตาม scenario
+- ไม่ใช้ Mountebank ใน component layer
+- ทุก test ตรวจทั้ง response และ DB state
+- เคส certificate ต้องตรวจ boundary interaction ตามที่เหมาะสม
+- รันผ่านด้วย `npm run test:component`

@@ -1,25 +1,24 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
-import path from 'node:path';
 import request from 'supertest';
 
 import { createComponentApp, createMockCourseRepository } from '../../../setup/app-factory.js';
-import { deleteCertificateImposter, loadCertificateImposter, startMountebank } from '../../../setup/mountebank-client.js';
+import {
+  createFakeCertificateService,
+  expectCertificateRequest,
+  stubCertificateSuccess,
+} from '../../../setup/fake-certificate-service.js';
 import { createMongoTestRuntime, type MongoTestRuntime } from '../../../setup/mongo-test-runtime.js';
 import { MongoEnrollmentRepository } from '../../../../src/repositories/mongo-repositories.js';
-import { HttpCertificateService } from '../../../../src/services/certificate.service.js';
 
 describe('TC03 Generate Certificate Success Component', () => {
   let mongoRuntime: MongoTestRuntime;
 
   beforeAll(async () => {
     mongoRuntime = await createMongoTestRuntime();
-    await startMountebank();
   });
 
   beforeEach(async () => {
     await mongoRuntime.reset();
-    await deleteCertificateImposter();
-    await loadCertificateImposter(path.join(process.cwd(), 'mountebank', 'imposters', 'certificate-service', 'success', 'tc03-generate-certificate-success.json'));
     await mongoRuntime.enrollmentsCollection.insertOne({
       id: 'ENR003',
       employeeId: 'EMP003',
@@ -37,7 +36,6 @@ describe('TC03 Generate Certificate Success Component', () => {
   });
 
   afterAll(async () => {
-    await deleteCertificateImposter();
     await mongoRuntime.close();
   });
 
@@ -50,7 +48,13 @@ describe('TC03 Generate Certificate Success Component', () => {
       enrolledCount: 98,
     });
     const enrollmentRepository = new MongoEnrollmentRepository(mongoRuntime.enrollmentsCollection);
-    const certificateService = new HttpCertificateService({ apiUrl: 'http://127.0.0.1:4545/certificates', timeoutMs: 300 });
+    const certificateService = createFakeCertificateService();
+    stubCertificateSuccess(certificateService, {
+      certificate_id: 'CERT003',
+      certificate_url: 'https://certificate.example.com/CERT003.pdf',
+      status: 'issued',
+      issued_at: '2026-05-15T10:00:00Z',
+    });
 
     const app = createComponentApp({ courseRepository, enrollmentRepository, certificateService });
     const response = await request(app).post('/enrollments/ENR003/certificate').send({ progress: 100 });
@@ -64,6 +68,12 @@ describe('TC03 Generate Certificate Success Component', () => {
         certificateUrl: 'https://certificate.example.com/CERT003.pdf',
         issuedAt: '2026-05-15T10:00:00Z',
       },
+    });
+
+    expectCertificateRequest(certificateService, {
+      refId: 'ENR003',
+      learnerId: 'EMP003',
+      courseRef: 'COM001',
     });
 
     const persisted = await mongoRuntime.enrollmentsCollection.findOne({ id: 'ENR003' });

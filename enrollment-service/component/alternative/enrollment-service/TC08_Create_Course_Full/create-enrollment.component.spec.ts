@@ -21,5 +21,6 @@ describe('TC08 Create Course Full Component', () => {
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({ message: 'Course is full' });
+    expect(await mongoRuntime.enrollmentsCollection.countDocuments()).toBe(0);
   });
 });

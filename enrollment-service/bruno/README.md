@@ -16,7 +16,34 @@ runtime ที่ collection นี้คาดหวัง:
 5. ระบบจะเซ็ต `enrollmentId` ให้อัตโนมัติจาก response
 6. จากนั้นค่อยรันเคสใน `alternative/` เช่น `alternative/TC04_Create_EmployeeId_Required`
 
-## Local Runtime ที่แนะนำ
+## Recommended Path
+
+เส้นทางแนะนำหลักสำหรับ Bruno/API layer คือ Dockerized runtime:
+
+```bash
+npm run test:bruno
+```
+
+หรือแยกเฉพาะ:
+
+```bash
+npm run test:bruno:success
+npm run test:bruno:alternative
+```
+
+เหตุผล:
+
+- reproducible กว่า local process orchestration
+- ลดปัญหา process ค้างและ environment ไม่ตรงกัน
+- align กับ API/integration style ที่ใกล้ production มากขึ้น
+
+## Local Runtime ทางเลือก
+
+ถ้าต้อง debug แบบ local-process orchestration เดิม ยังใช้ได้ผ่าน:
+
+```bash
+npm run test:api:local
+```
 
 รันจาก root ของโปรเจกต์นี้:
 
@@ -25,6 +52,21 @@ npm run mongo:start
 npm run mb:start
 npm run start
 ```
+
+runtime แบบ Docker จะยก:
+
+- `enrollment-service`
+- MongoDB
+- Mountebank
+
+ผ่าน `docker-compose.api-test.yml` แล้วค่อยรัน Bruno จาก host machine
+
+host ports ที่ runtime นี้ใช้:
+
+- `3000` = `enrollment-service`
+- `2525` = Mountebank admin API
+- `4545` = certificate API imposter
+- `27018` = MongoDB
 
 ถ้าจะทดสอบ certificate success flow ให้โหลด imposter ก่อน:
 

@@ -1,6 +1,25 @@
 # Mountebank Setup
 
-โฟลเดอร์นี้ใช้สำหรับ mock external certificate API เพื่อให้ `enrollment-service` ทดสอบ `generateCertificate()` ได้โดยไม่ต้องรัน `certificate-service` จริง
+โฟลเดอร์นี้ใช้สำหรับ mock external certificate API เพื่อให้ `enrollment-service` ทดสอบ `generateCertificate()` ผ่าน HTTP/API flow ได้โดยไม่ต้องรัน `certificate-service` จริง
+
+## Test Taxonomy Note
+
+Mountebank ใน repo นี้มีหน้าที่สำหรับ:
+
+- Bruno / API flow ของ `enrollment-service`
+- local runtime ที่ต้องการจำลอง certificate API ผ่าน HTTP จริง
+- cross-repo-compatible local setup ที่ยังไม่ใช้ provider จริง
+
+Mountebank ใน repo นี้ไม่ได้เป็นส่วนหนึ่งของ `component test` อีกต่อไป
+
+- `component test`
+  - ใช้ fake `CertificateService`
+  - ไม่วิ่งไปถึง external provider
+- `Bruno API test`
+  - ใช้ Mountebank เพื่อจำลอง certificate API
+- `cross-repo integration`
+  - ใช้ `enrollment-service` คุยกับ `certificate-service` จริง
+  - ถ้าต้อง fake upstream provider ให้ทำในฝั่ง `certificate-service`
 
 ## Purpose
 
@@ -14,9 +33,9 @@
 แนวทางนี้เหมาะกับ:
 
 - API test ผ่าน Bruno
-- component test
 - การฝึก external dependency simulation
-- การทดสอบ certificate flow แบบควบคุมผลลัพธ์ได้
+- การทดสอบ certificate flow แบบควบคุมผลลัพธ์ได้ผ่าน local runtime
+- การเตรียม local environment ที่ compatible กับ cross-repo integration
 
 ## Structure
 
@@ -45,7 +64,7 @@ Bruno จะยิงเข้า `enrollment-service` ที่ endpoint:
 - `POST /enrollments/:enrollmentId/certificate`
 
 แต่ภายใน `enrollment-service` จะเรียก external certificate API ต่ออีกทอดหนึ่ง
-ดังนั้นต้องตั้งค่าให้ `enrollment-service` ชี้ไปที่ Mountebank แทน certificate service จริง
+ดังนั้นต้องตั้งค่าให้ `enrollment-service` ชี้ไปที่ Mountebank แทน certificate service จริงในชั้น Bruno/API runtime นี้
 
 ## Expected External Contract
 
@@ -80,7 +99,8 @@ Expected result:
 ### 2. Invalid Response
 
 ใช้กับ:
-- TC16
+- direct runtime / ad-hoc invalid-response checks เท่านั้น
+- ไม่ได้ถูกใช้ใน Bruno default flow ปัจจุบัน
 
 Behavior:
 - ตอบ `200`
@@ -140,9 +160,12 @@ Expected result:
 | TC13 | Progress 99 | not required | fail before external call |
 | TC14 | Progress 0 | not required | fail before external call |
 | TC15 | Enrollment not approved | not required | fail before external call |
-| TC16 | Invalid certificate response | `alternative/tc16-invalid-certificate-response.json` | `CERTIFICATE_FAILED` |
 | TC17 | Certificate API error | `alternative/tc17-certificate-api-error.json` | `CERTIFICATE_FAILED` |
 | TC17 | Certificate API timeout | `alternative/tc17-certificate-api-timeout.json` | `CERTIFICATE_FAILED` |
+
+หมายเหตุ:
+- imposter `tc16-invalid-certificate-response.json` ยังเก็บไว้สำหรับจำลอง invalid upstream response แบบเฉพาะกิจ
+- แต่ Bruno/API default flow ปัจจุบันไม่ได้ map `TC16` ไปที่ invalid response แล้ว
 
 ## Test Flow
 

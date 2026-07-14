@@ -30,12 +30,12 @@ describe('EnrollmentService.createEnrollment', () => {
     );
   });
 
-  it('TC16 - Create enrollment by course PHY001', async () => {
+  it('TC16 - Create enrollment by course CHE001', async () => {
     courseRepository.findById.mockResolvedValue({
-      id: 'PHY001',
-      title: 'Physic with sir title',
+      id: 'CHE001',
+      title: 'Chemistry with sir title',
       status: 'OPEN',
-      seatLimit: 98,
+      seatLimit: 99,
       enrolledCount: 1,
     });
 
@@ -44,30 +44,30 @@ describe('EnrollmentService.createEnrollment', () => {
     enrollmentRepository.create.mockResolvedValue({
       id: 'ENR016',
       employeeId: 'EMP016',
-      courseId: 'PHY001',
+      courseId: 'CHE001',
       status: 'PENDING_APPROVAL',
     });
 
     const result = await service.createEnrollment({
       employeeId: 'EMP016',
-      courseId: 'PHY001',
+      courseId: 'CHE001',
     });
 
     expect(result).toEqual({
       enrollmentId: 'ENR016',
       employeeId: 'EMP016',
-      courseId: 'PHY001',
+      courseId: 'CHE001',
       status: 'PENDING_APPROVAL',
     });
 
-    expect(courseRepository.findById).toHaveBeenCalledWith('PHY001');
+    expect(courseRepository.findById).toHaveBeenCalledWith('CHE001');
     expect(enrollmentRepository.findActiveByEmployeeAndCourse).toHaveBeenCalledWith(
       'EMP016',
-      'PHY001',
+      'CHE001',
     );
     expect(enrollmentRepository.create).toHaveBeenCalledWith({
       employeeId: 'EMP016',
-      courseId: 'PHY001',
+      courseId: 'CHE001',
       status: 'PENDING_APPROVAL',
     });
   });

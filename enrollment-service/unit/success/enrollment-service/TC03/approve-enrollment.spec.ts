@@ -33,16 +33,16 @@ describe('EnrollmentService.approveEnrollment', () => {
     enrollmentRepository.approve.mockResolvedValue({
       enrollmentId: 'ENR003',
       status: 'APPROVED',
-      approvedBy: 'HR001',
+      approvedBy: 'HR002',
       approvedAt: '2026-05-15T10:00:00Z',
     });
 
     await expect(
-      service.approveEnrollment({ enrollmentId: 'ENR003', approvedBy: 'HR001' }),
+      service.approveEnrollment({ enrollmentId: 'ENR003', approvedBy: 'HR002' }),
     ).resolves.toEqual({
       enrollmentId: 'ENR003',
       status: 'APPROVED',
-      approvedBy: 'HR001',
+      approvedBy: 'HR002',
       approvedAt: '2026-05-15T10:00:00Z',
     });
   });

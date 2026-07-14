@@ -21,5 +21,6 @@ describe('TC06 Create Course Not Found Component', () => {
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ message: 'Course not found' });
+    expect(await mongoRuntime.enrollmentsCollection.countDocuments()).toBe(0);
   });
 });

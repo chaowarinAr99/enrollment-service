@@ -33,7 +33,7 @@ describe('EnrollmentService.generateCertificate', () => {
     });
     certificateService.createCertificate.mockResolvedValue({
       certificate_id: 'CERT003',
-      certificate_url: 'https://cert.local/CERT003',
+      certificate_url: 'https://certificate.example.com/CERT003.pdf',
       status: 'issued',
       issued_at: '2026-05-15T10:00:00Z',
     });
@@ -45,7 +45,7 @@ describe('EnrollmentService.generateCertificate', () => {
       certificateStatus: 'CERTIFICATE_ISSUED',
       certificate: {
         certificateId: 'CERT003',
-        certificateUrl: 'https://cert.local/CERT003',
+        certificateUrl: 'https://certificate.example.com/CERT003.pdf',
         issuedAt: '2026-05-15T10:00:00Z',
       },
     });

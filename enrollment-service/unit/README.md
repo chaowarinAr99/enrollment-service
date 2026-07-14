@@ -2,6 +2,21 @@
 
 โครงนี้กลับไปใช้รูปแบบเดิมแบบเป๊ะที่สุด: `1 TC = 1 folder` ใต้ `success/` และ `alternative/`
 
+## Test Taxonomy Note
+
+- `unit test`
+  - ทดสอบเฉพาะ `EnrollmentServiceImpl`
+  - mock ทุก dependency ของ service
+- `component test`
+  - ทดสอบ `enrollment-service` ตัวเดียวผ่าน app จริง
+  - ใช้ Mongo จริงสำหรับ `EnrollmentRepository`
+  - fake `CourseRepository` และ `CertificateService`
+- `Bruno API test`
+  - ยิง HTTP flow ของ `enrollment-service`
+  - ใช้ Mountebank จำลอง certificate API ใน local runtime
+- `cross-repo integration`
+  - ทดสอบ `enrollment-service` คุยกับ `certificate-service` จริง
+
 ## Structure
 ```text
 unit/

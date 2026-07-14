@@ -13,8 +13,21 @@ component/COMPONENT_TEST_DESIGN.md
 - mock `CourseRepository`
 - ใช้ MongoDB จริงเฉพาะ `EnrollmentRepository`
 - ใช้ app/service จริง
-- ใช้ Mountebank จำลอง external certificate API
+- fake `CertificateService` เฉพาะ boundary ของ `enrollment-service`
 - ตรวจทั้ง HTTP response และ state ใน database
+
+## Test Taxonomy
+
+- `unit test`
+  - ทดสอบ `EnrollmentServiceImpl` โดย mock `CourseRepository`, `EnrollmentRepository`, `CertificateService`
+- `component test`
+  - ทดสอบ `enrollment-service` ตัวเดียว
+  - ใช้ Mongo จริงสำหรับ `EnrollmentRepository`
+  - fake `CourseRepository` และ `CertificateService`
+- `cross-repo integration`
+  - ทดสอบ `enrollment-service` คุยกับ `certificate-service` จริง
+  - ชั้นนี้ไม่อยู่ในโฟลเดอร์ `component/`
+  - ถ้าต้อง fake upstream external provider ให้ทำในฝั่ง `certificate-service`
 
 ## Target Structure
 
@@ -23,8 +36,8 @@ component/
   README.md
   setup/
     app-factory.ts
+    fake-certificate-service.ts
     mongo-test-runtime.ts
-    mountebank-client.ts
   success/
     enrollment-service/
       TC01_Create_Certificate_Success_course_PHY001/
@@ -62,8 +75,13 @@ component/
 ### `setup/app-factory.ts`
 - สร้าง Express app สำหรับ test
 - register routes
-- inject mock `CourseRepository`, real `EnrollmentRepository`, และ certificate client
+- inject mock `CourseRepository`, real `EnrollmentRepository`, และ fake `CertificateService`
 - ใช้แทนการรัน `npm run start` จากภายนอกใน test suite
+
+### `setup/fake-certificate-service.ts`
+- helper สำหรับสร้าง fake `CertificateService`
+- ใช้คุม success / API error / timeout ใน component test
+- ใช้ assert ว่า certificate boundary ถูกเรียกหรือไม่ถูกเรียก
 
 ### `setup/mongo-test-runtime.ts`
 - connect Mongo test database
@@ -71,10 +89,6 @@ component/
 - close connection หลังจบ
 - แยก DB name ของ component test ออกจาก local runtime ปกติ
 - ดูแลเฉพาะ `enrollments` collection ตามขอบเขต component test ปัจจุบัน
-
-### `setup/mountebank-client.ts`
-- helper สำหรับ load / delete imposter จาก test code
-- ใช้กับเคส success, invalid response, api error, timeout
 
 ### `success/enrollment-service/TCxx_*/`
 - mirror โครงสร้างของ Bruno ในระดับ TC folder
@@ -164,6 +178,6 @@ Implemented now:
 
 - component tests ใช้ Mongo จริงสำหรับ `EnrollmentRepository`
 - mock `CourseRepository` ได้ตาม definition ปัจจุบัน
-- external certificate behavior ถูกควบคุมด้วย Mountebank
+- external certificate behavior ถูกควบคุมด้วย fake `CertificateService`
 - ทุก test ตรวจ response และ DB state
 - มี command CLI แยกเช่น `npm run test:component`

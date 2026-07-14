@@ -36,15 +36,15 @@ describe('EnrollmentService.generateCertificate', () => {
     enrollmentRepository.findById.mockResolvedValue({
       id: 'ENR016',
       employeeId: 'EMP016',
-      courseId: 'PHY001',
+      courseId: 'CHE001',
       status: 'REJECTED',
     });
 
     await expect(
-      service.generateCertificate({ enrollmentId: 'ENR016', progress: 100 }),
+      service.generateCertificate({ enrollmentId: 'ENR016', progress: 0 }),
     ).rejects.toThrow(InvalidEnrollmentStatusError);
     await expect(
-      service.generateCertificate({ enrollmentId: 'ENR016', progress: 100 }),
+      service.generateCertificate({ enrollmentId: 'ENR016', progress: 0 }),
     ).rejects.toThrow('Enrollment is not approved');
 
     expect(enrollmentRepository.findById).toHaveBeenCalledWith('ENR016');

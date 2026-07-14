@@ -21,5 +21,15 @@ describe('TC12 Create Enrollment Component', () => {
 
     expect(response.status).toBe(201);
     expect(response.body).toEqual({ enrollmentId: 'ENR001', employeeId: 'EMP012', courseId: 'PHY001', status: 'PENDING_APPROVAL' });
+
+    const persisted = await mongoRuntime.enrollmentsCollection.findOne({ id: 'ENR001' });
+    expect(persisted).toMatchObject({
+      id: 'ENR001',
+      employeeId: 'EMP012',
+      courseId: 'PHY001',
+      status: 'PENDING_APPROVAL',
+      certificateStatus: null,
+      certificateUrl: null,
+    });
   });
 });

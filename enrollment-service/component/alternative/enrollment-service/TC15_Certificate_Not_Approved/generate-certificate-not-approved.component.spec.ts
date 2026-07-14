@@ -2,9 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/glo
 import request from 'supertest';
 
 import { createComponentApp, createMockCourseRepository } from '../../../setup/app-factory.js';
+import { createFakeCertificateService } from '../../../setup/fake-certificate-service.js';
 import { createMongoTestRuntime, type MongoTestRuntime } from '../../../setup/mongo-test-runtime.js';
 import { MongoEnrollmentRepository } from '../../../../src/repositories/mongo-repositories.js';
-import { HttpCertificateService } from '../../../../src/services/certificate.service.js';
 
 describe('TC15 Generate Certificate Not Approved Component', () => {
   let mongoRuntime: MongoTestRuntime;
@@ -20,11 +20,20 @@ describe('TC15 Generate Certificate Not Approved Component', () => {
   it('returns 409 when enrollment is not approved', async () => {
     const courseRepository = createMockCourseRepository({ id: 'PHY001', title: 'Physic with sir title', status: 'OPEN', seatLimit: 99, enrolledCount: 0 });
     const enrollmentRepository = new MongoEnrollmentRepository(mongoRuntime.enrollmentsCollection);
-    const certificateService = new HttpCertificateService({ apiUrl: 'http://127.0.0.1:4545/certificates', timeoutMs: 300 });
+    const certificateService = createFakeCertificateService();
     const app = createComponentApp({ courseRepository, enrollmentRepository, certificateService });
     const response = await request(app).post('/enrollments/ENR015/certificate').send({ progress: 100 });
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({ message: 'Enrollment is not approved' });
+    expect(certificateService.createCertificate).not.toHaveBeenCalled();
+
+    const persisted = await mongoRuntime.enrollmentsCollection.findOne({ id: 'ENR015' });
+    expect(persisted).toMatchObject({
+      id: 'ENR015',
+      status: 'PENDING_APPROVAL',
+      certificateStatus: null,
+      certificateUrl: null,
+    });
   });
 });

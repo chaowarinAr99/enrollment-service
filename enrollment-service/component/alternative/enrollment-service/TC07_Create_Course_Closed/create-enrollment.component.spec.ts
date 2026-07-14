@@ -21,5 +21,6 @@ describe('TC07 Create Course Closed Component', () => {
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({ message: 'Course is not open for enrollment' });
+    expect(await mongoRuntime.enrollmentsCollection.countDocuments()).toBe(0);
   });
 });

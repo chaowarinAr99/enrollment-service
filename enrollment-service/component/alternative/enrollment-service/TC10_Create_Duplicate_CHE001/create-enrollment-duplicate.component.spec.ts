@@ -26,5 +26,12 @@ describe('TC10 Create Duplicate CHE001 Component', () => {
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({ message: 'Employee already enrolled' });
+
+    const enrollmentCount = await mongoRuntime.enrollmentsCollection.countDocuments({
+      employeeId: 'EMP010',
+      courseId: 'CHE001',
+    });
+
+    expect(enrollmentCount).toBe(1);
   });
 });

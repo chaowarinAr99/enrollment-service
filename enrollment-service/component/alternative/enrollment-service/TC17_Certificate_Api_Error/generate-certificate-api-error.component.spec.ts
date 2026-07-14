@@ -1,38 +1,24 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
-import path from 'node:path';
 import request from 'supertest';
 
 import { createComponentApp, createMockCourseRepository } from '../../../setup/app-factory.js';
 import {
-  deleteCertificateImposter,
-  loadCertificateImposter,
-  startMountebank,
-} from '../../../setup/mountebank-client.js';
+  createFakeCertificateService,
+  expectCertificateRequest,
+  stubCertificateApiError,
+} from '../../../setup/fake-certificate-service.js';
 import { createMongoTestRuntime, type MongoTestRuntime } from '../../../setup/mongo-test-runtime.js';
 import { MongoEnrollmentRepository } from '../../../../src/repositories/mongo-repositories.js';
-import { HttpCertificateService } from '../../../../src/services/certificate.service.js';
 
 describe('Generate Certificate API Error Component', () => {
   let mongoRuntime: MongoTestRuntime;
 
   beforeAll(async () => {
     mongoRuntime = await createMongoTestRuntime();
-    await startMountebank();
   });
 
   beforeEach(async () => {
     await mongoRuntime.reset();
-    await deleteCertificateImposter();
-    await loadCertificateImposter(
-      path.join(
-        process.cwd(),
-        'mountebank',
-        'imposters',
-        'certificate-service',
-        'alternative',
-        'tc17-certificate-api-error.json',
-      ),
-    );
     await mongoRuntime.enrollmentsCollection.insertOne({
       id: 'ENR017',
       employeeId: 'EMP017',
@@ -50,7 +36,6 @@ describe('Generate Certificate API Error Component', () => {
   });
 
   afterAll(async () => {
-    await deleteCertificateImposter();
     await mongoRuntime.close();
   });
 
@@ -65,10 +50,8 @@ describe('Generate Certificate API Error Component', () => {
     const enrollmentRepository = new MongoEnrollmentRepository(
       mongoRuntime.enrollmentsCollection,
     );
-    const certificateService = new HttpCertificateService({
-      apiUrl: 'http://127.0.0.1:4545/certificates',
-      timeoutMs: 300,
-    });
+    const certificateService = createFakeCertificateService();
+    stubCertificateApiError(certificateService);
 
     const app = createComponentApp({
       courseRepository,
@@ -84,6 +67,12 @@ describe('Generate Certificate API Error Component', () => {
     expect(response.body).toEqual({
       message: 'Cannot generate certificate',
       code: 'CERTIFICATE_API_ERROR',
+    });
+
+    expectCertificateRequest(certificateService, {
+      refId: 'ENR017',
+      learnerId: 'EMP017',
+      courseRef: 'COM001',
     });
 
     const persistedEnrollment = await mongoRuntime.enrollmentsCollection.findOne({ id: 'ENR017' });
